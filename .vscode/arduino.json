@@ -1,0 +1,7 @@
+{
+    "board": "arduino:avr:mega",
+    "sketch": "K40_Control_Center.ino",
+    "output": "ArduinoOutput",
+    "port": "COM3",
+    "configuration": "cpu=atmega2560"
+}

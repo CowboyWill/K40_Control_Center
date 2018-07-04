@@ -1,0 +1,52 @@
+{
+    "configurations": [
+        {
+            "name": "Win32",
+            "includePath": [
+                "${workspaceRoot}",
+                "C:\\Users\\Will\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.21\\cores\\arduino",
+                "C:\\Users\\Will\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.21\\libraries\\Wire\\src",
+                "C:\\Users\\Will\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.21\\variants\\circuitplay32u4",
+                "E:\\Documents\\Arduino\\libraries\\DallasTemperature",
+                "E:\\Documents\\Arduino\\libraries\\LiquidCrystal_I2C",
+                "E:\\Documents\\Arduino\\libraries\\OneWire",
+                "E:\\Documents\\Arduino\\libraries\\ITEADLIB_Arduino_Nextion-master",
+                "C:\\Users\\cowbo\\Documents\\Arduino\\libraries\\ITEADLIB_Arduino_Nextion-master",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\avr\\include",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\lib\\gcc\\avr\\4.9.2\\include",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino",
+                "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\variants\\mega",
+                "C:\\Users\\cowbo\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.21\\libraries\\Wire\\src",
+                "C:\\Users\\cowbo\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.21\\cores\\arduino",
+                "C:\\Users\\cowbo\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.21\\variants\\circuitplay32u4",
+                "\\."
+            ],
+            "browse": {
+                "limitSymbolsToIncludedHeaders": false,
+                "path": [
+                    "${workspaceRoot}",
+                    "C:\\Users\\Will\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.21\\cores\\arduino",
+                    "C:\\Users\\Will\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.21\\libraries\\Wire\\src",
+                    "C:\\Users\\Will\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.21\\variants\\circuitplay32u4",
+                    "E:\\Documents\\Arduino\\libraries\\DallasTemperature",
+                    "E:\\Documents\\Arduino\\libraries\\LiquidCrystal_I2C",
+                    "E:\\Documents\\Arduino\\libraries\\OneWire",
+                    "E:\\Documents\\Arduino\\libraries\\ITEADLIB_Arduino_Nextion-master",
+                    "C:\\Users\\cowbo\\Documents\\Arduino\\libraries\\ITEADLIB_Arduino_Nextion-master",
+                    "C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\avr\\include",
+                    "C:\\Program Files (x86)\\Arduino\\hardware\\tools\\avr\\lib\\gcc\\avr\\4.9.2\\include",
+                    "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\cores\\arduino",
+                    "C:\\Program Files (x86)\\Arduino\\hardware\\arduino\\avr\\variants\\mega",
+                    "C:\\Users\\cowbo\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.21\\libraries\\Wire\\src",
+                    "C:\\Users\\cowbo\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.21\\cores\\arduino",
+                    "C:\\Users\\cowbo\\AppData\\Local\\Arduino15\\packages\\arduino\\hardware\\avr\\1.6.21\\variants\\circuitplay32u4",
+                    "\\."
+                ]
+            },
+            "intelliSenseMode": "msvc-x64",
+            "cStandard": "c11",
+            "cppStandard": "c++17"
+        }
+    ],
+    "version": 4
+}

@@ -1,0 +1,12 @@
+{
+    "files.autoSave": "afterDelay",
+    "editor.fontSize": 16,
+    "editor.tabSize": 2,
+    "C_Cpp.intelliSenseEngineFallback": "Enabled",
+    "files.associations": {
+        "condition_variable": "cpp",
+        "future": "cpp",
+        "mutex": "cpp"
+    },
+
+}
