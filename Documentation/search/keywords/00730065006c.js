@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("sel",["Function","Variable"],[["selfCheck",,[[,,,,0,"File:K40_Control_Center.ino:selfCheck"]]],["selfcheck_page",,[[,,,,1,"File:K40_Control_Center.ino:selfcheck_page"]]]]);

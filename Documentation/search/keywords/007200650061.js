@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("rea",["Function"],[["readSettings",,[[,,,,0,"File:K40_Control_Center.ino:readSettings"]]],["readThermistors",,[[,,,,0,"File:K40_Control_Center.ino:readThermistors"]]]]);

@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("set",["Constant","Function"],[["settings",,[[,"MISC settings Variables",,,0,"File:K40_Control_Center.h:MISC_settings_Variables"]]],["setup",,[[,,,,1,"File:K40_Control_Center.ino:setup"]]]]);

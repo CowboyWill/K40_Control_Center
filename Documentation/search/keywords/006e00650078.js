@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("nex",["Variable","File"],[["nex_listen_list",,[[,,,,0,"File:K40_Control_Center.ino:nex_listen_list"]]],["Nextion",,[[,"Nextion components for home page",,,0,"File:K40_Control_Center.ino:Nextion_components_for_home_page"],[,"Nextion.h",,,1,"File:K40_Control_Center.ino:Nextion.h"]]]]);

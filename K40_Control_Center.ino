@@ -1,190 +1,456 @@
-/*****************************************************************************
- * @File     K40 Control Center.ino
- * @Title    Chinese Co2 Laser Control Center
- * @Author   Will Travis 2018
- * @Date     06-25-2018
- * @Version  0.12
- *
- * See instruction file for hookup information.
- * 
- * room temperature between 5-40C (41-104F)
- * Water temperature between 
- *    10-40C (50-104F) Tube manual 
- *    0-35C (32-95F) 
- * 
- * @Description
- * Arduino Nano - 14 Digital I/O pins, 6 Analog input pins:
- *    18-20C - 25max (64.4-68F 77max)
- *    22-25C / 71.6-77F  ideal dont go above 28F/ 82.4F
- *    16-18C 24C max / 60.8-64.4F 75.2F max
- *    never above 25C / 77F
- *    20-30C 25C / 68-86F 77F  multiple people
- *    
- * 
+/****************************************************************************
+
+  File: K40 Control Center.ino 
+
+  Program: Chinese Co2 Laser Control Center
+ 
+  Author:
+    Will Travis
+ 
+  Date:
+    06-25-2018
+ 
+  Version: 
+    0.15
+  
+  See Also:
+    See instruction file for hookup information.
+  
+  Description:
+    When modifying my K40, I wanted to have a display with information on 
+    different aspects of the K40, so I decided to use the Nextion display.
+    It works great with an Arduino that can be used read many sensors
+    of data.  This program displays that information and allows interaction
+    with buttons and other items...
+
+  Docs:
+    Documentation created by NaturalDocs.org.  Documentation style follows
+    Arduino standard, including:
+
+    - Variable names start with a lower-case letter, use uppercase letters as separators and do not use underbars ('_').
+    - Function names start with a lower-case letter, use uppercase letters as separators and do not use underbars ('_').
+    - Constant names use all capital letters and use underbars ('_') as separators.
+    - Using byte, int, unsigned int, etc. vs. int8_t, uint8_t, etc.
+    - Avoiding the use of defines as much as possible.
+    - Using const instead of define.
  *****************************************************************************/
 
-/**************************** INCLUDE FILES *********************************/
+// Files: Include files
+//   K40_Control_Center.h - main configuration file
+//   Nextion.h            - Nextion display
+//   Flow                 - water flow library
+#include "K40_Control_Center.h"
 #include "Nextion.h"
-#include "test.h"
-/**************************** END INCLUDES  *********************************/
 
-/************************ GLOBAL VARIABLES **********************************/
-int prev_fault = 1;        // Used to display faults only when changing
+/****************************************************************************
+ * Variables: Global Variables
+ *   prev_fault - Used to display faults only when changing
+ *   flowAni    - used to animate flow graphics
+ *   celcius    - Celcius = 0, Fahrenheit = 1
+ *   caseADC    - used to average Analog to Digital temp readings
+ *   waterADC   - used to average Analog to Digital temp readings
+ *   tempCount  - used to count readings for NUM_SAMPLES times
+ *   prevMillis - used to determine when to do a function (stores milliseconds)
+ *   last_read_temp - reads thermistor time since last changed
+ *   doorOpen   - true if the door is open, false = door is closed
+ *   keySwitchOpen  - true if key switch is open, false if key closed
+ *   waterHighAlarm - true if water temp too HIGH
+ *   waterLowAlarm  - true if water temp too LOW
+ *   caseHighAlarm  - true if case temp too HIGH
+ *   caseLowAlarm   - true if case temp too LOW
+ *   peltierOn      - indicates if peltier is ON
+ *   
+ ****************************************************************************/
+int prev_fault = 1;
 
-//average the flow sensor values
-byte flowAni = 0;           // used to animate flow graphics
-float flowRate;
+byte flowAni = 0;
 
-// Temperature
 uint32_t celcius;
+unsigned int caseADC = 0;
+unsigned int waterADC = 0;
+byte tempCount = 0;
 
 unsigned long prevMillis = millis();
-/************************ END GLOBAL VARIABLES ******************************/
+unsigned long last_read_temp = millis() - UPDATE_TEMP_DELAY;
 
-/********************************************************************
- * Nextion components for home page
- *******************************************************************/
-NexPage selfcheck_page    = NexPage(0, 0, "selfcheck");
-NexVariable celcius_va      = NexVariable(0, 2, "vacf");
+byte doorOpen = false;
+byte keySwitchOpen = false;
+byte waterHighAlarm = false;
+byte waterLowAlarm = false;
+byte caseHighAlarm = false;
+byte caseLowAlarm = false;
+byte peltierOn = false;
+
+/*****************************************************************************
+ * Variables: Nextion components for home page
+ * selfcheck_page - Displayed on startup, checks if sensors working
+ * celcius_va     - Celcius vs Fahrenheit
+ * home           - Home page
+ * lights_btn     - Button to turn interior lights on and off
+ * assist_btn     - Button to turn air assist on and off
+ * pointer_btn    - Button to turn laser pointer on and off
+ * exhaust_btn    - Button to turn exhaust fan on and off
+ * status_txt     - Text line at bottom of display used to display error MESSAGES
+ * water_temp     - Displays water temp (string to display floating point number)
+ * case_temp_num  - Displays case temp (integer number)
+ ****************************************************************************/
+NexPage selfcheck_page = NexPage(0, 0, "selfcheck");
+NexVariable celcius_va = NexVariable(0, 2, "vacf");
 
 NexPage home              = NexPage(1, 0, "home");
-NexDSButton lights_btn      = NexDSButton(1, 9, "lights_btn");
 NexScrolltext status_txt    = NexScrolltext(1, 4, "status_txt");
 NexText water_temp          = NexText(1, 7, "water_temp");
+NexDSButton lights_btn      = NexDSButton(1, 9, "lights_btn");
+NexNumber case_temp_num     = NexNumber(1, 13, "case_temp_num");
+NexDSButton assist_btn      = NexDSButton(1, 14, "assist_btn");
+NexDSButton exhaust_btn     = NexDSButton(1, 15, "exhaust_btn");
+NexDSButton pointer_btn     = NexDSButton(1, 16, "pointer_btn");
+NexPicture peltier_pic      = NexPicture(1, 17, "peltier_pic");
 
-NexTouch *nex_listen_list[] = 
-{
-    &lights_btn,
-    NULL
+// Variable: nex_listen_list
+//   List of all Nextion objects that will return a value, e.g. buttons
+NexTouch *nex_listen_list[] = {
+  &lights_btn,
+  &assist_btn,
+  &pointer_btn,
+  &exhaust_btn,
+  NULL
 };
 
-
-/******************************* FUNCTIONS **********************************/
-void display_text(int fault) {
-  if(fault == 0){  // 0 = OK, do not flash, but scroll instead
-    status_txt.Set_scroll_dir(1);  // scroll right to left 
+/*****************************************************************************
+ * Function: display_status  
+ * Displays message on status line at bottom of Nextion display
+ *
+ * Argument:
+ *   fault - number of message to display from MESSAGES array
+ *****************************************************************************/
+void display_status(int fault) {
+  // 0 = No fault, scroll text
+  if (fault == 0) {
+    status_txt.Set_scroll_dir(1);       // scroll right to left
     status_txt.Set_scroll_distance(10); // scroll speed
-  } else {
-    status_txt.Set_scroll_dir(2);  // scroll up to down
-    status_txt.Set_scroll_distance(40);  // this causes it to flash (height of box)
+  }else{
+    status_txt.Set_scroll_dir(2);       // scroll up to down
+    status_txt.Set_scroll_distance(40); // this causes it to flash (height of box)
   }
-  status_txt.setText(error_messages[fault]);
+  status_txt.setText(MESSAGES[fault]);
 }
 
-void selfCheck() { // Check all systems at startup
-  dbSerialPrintln("START Self Check"); 
+/*****************************************************************************
+ * Function: selfCheck
+ * 
+ * Checks if all systems are running.  
+ * Checking off each system on the Nextion display.
+ * Will only test systems that do not have Bypass set to true.
+ * When complete, will display home page.
+ *****************************************************************************/
+void selfCheck() { 
+  dbSerialPrintln("START Self Check");
+  // Read temp and throw away first set of readings
+  while (!readThermistors());
 
-  delay(2000);  // wait 1 second before moving to home page
+  delay(2000); // wait  before moving to home page
   home.show();
   delay(10);
-  dbSerialPrintln("END Self Check"); 
+  dbSerialPrintln("END Self Check");
 }
 
-
-/*************  Dual state button pop callback functions **************/
-//Turn the LED lights on or off based on the value of the lights button. 
-void lights_btnPopCallback(void *ptr)
-{
+/*****************************************************************************
+ * Function: lights_btnPopCallback
+ * Turn the LED lights on or off based on the value of the lights button. 
+ *****************************************************************************/
+void lights_btnPopCallback(void *ptr) {
   uint32_t dual_state;
   // Get the state value of dual state button component.
   lights_btn.getValue(&dual_state);
-  digitalWrite(LIGHTS_PIN, dual_state);  // Turn on lights
+  digitalWrite(LIGHTS_PIN, dual_state); // Turn on lights
+}
+/*****************************************************************************
+ * Function: assist_btnPopCallback
+ * Turn the air assist on or off based on the value of the dual state button.
+ *****************************************************************************/
+void assist_btnPopCallback(void *ptr)
+{
+  uint32_t dual_state;
+  // Get the state value of dual state button component.
+  assist_btn.getValue(&dual_state);
+  digitalWrite(ASSIST_PIN, dual_state);  // Turn on or off air assist
+}
+/*****************************************************************************
+ * Function: pointer_btnPopCallback
+ * Turn the laser pointer on or off based on the value of the laser button.
+ *****************************************************************************/
+void pointer_btnPopCallback(void *ptr)
+{
+  uint32_t dual_state;
+  // Get the state value of dual state button component.
+  pointer_btn.getValue(&dual_state);
+  digitalWrite(POINTER_PIN, dual_state);  // Turn on or off laster pointer
+}
+
+/*****************************************************************************
+ * Function: exhaust_btnPopCallback
+ * Turn the exhaust fan on or off based on the value of the exhaust button.
+ *****************************************************************************/ 
+void exhaust_btnPopCallback(void *ptr)
+{
+  uint32_t dual_state;
+  // Get the state value of dual state button component.
+  exhaust_btn.getValue(&dual_state);
+  digitalWrite(EXHAUST_PIN, dual_state);  // Turn on or off exhaust fan
 }
 
 
-// Read settings
+/*****************************************************************************
+ * Function: readSettings  
+ * Reads settings from Nextion 
+ *****************************************************************************/
 void readSettings() {
-  celcius_va.getValue(&celcius); 
+  celcius_va.getValue(&celcius);
 }
 
-// Read temperature from sensor
-float readTemperature(byte pin) {
-  int tempReading = analogRead(pin);
-  float tempVolts = tempReading * 3.3 / 1024.0;
-  float tempC = (tempVolts - 0.5) * 100.0;
-  if (celcius) {  // 0=Celsius, 1=Fahrenheit
-    return tempC;
-  } else {
-    return (tempC * 1.8 + 32);
+/*****************************************************************************
+ * Function: readThermistors
+ *   Read a values from both water and case thermistors, 
+ *   if it has read multiple values up to NUM_SAMPLES of times then 
+ *   calculate average in global variables waterADC and caseADC
+ * 
+ * Returns:
+ *   true if temperature is read NUM_SAMPLES times
+ *   false if not all samples have been read
+ * 
+ * Global Variables:
+ *   waterADC       - running total of raw temp reads from water thermistor
+ *   caseADC        - running total of raw temp reads from case thermistor
+ *   WATER_TEMP_PIN - Arduino pin of water thermistor
+ *   CASE_TEMP_PIN  - Arduino pin of case thermistor
+ *   tempCount      - count of temperature reading taken, this is compared
+ *      to the NUM_SAMPLES before an average is taken
+ *****************************************************************************/
+bool readThermistors() {
+  if (PERMIT_WATER_TEMP) waterADC += analogRead(WATER_TEMP_PIN);
+  if (PERMIT_CASE_TEMP)  caseADC += analogRead(CASE_TEMP_PIN);
+  tempCount++;
+  if (tempCount == NUM_SAMPLES)  {
+    tempCount = 0;
+    if (PERMIT_WATER_TEMP) waterADC /= NUM_SAMPLES; // get average
+    if (PERMIT_CASE_TEMP)  caseADC /= NUM_SAMPLES;  // get average
+    return true;
+  }else{
+    return false;
   }
 }
 
+/*****************************************************************************
+ * Function: convertToTemp
+ *  Converts input from a thermistor analog to Kelvin temperature value.
+ * 
+ * Parameter:
+ *   adc - raw value from analog pin
+ * 
+ * Return:
+ *   temperature - in Kelvin
+ * 
+ * Global Variables Needed:
+ *     INVT0    - ?
+ *     INVBETA  - inverse of the thermistor Beta value supplied by manufacturer
+ *****************************************************************************/
+float convertToTemp(float adc) {
+  return (1.00 / (INVT0 + INVBETA * (log(1023.00 / adc - 1.00))));
+}
 
+/*****************************************************************************
+ * Function: convertKtoCF
+ *  Converts convert Kelvin to Celcuis or Fahrenheit
+ * 
+ * Parameter:
+ *   kelvin - kelvin temp
+ * 
+ * Return:
+ *   temperature in Celcius or Fahrenheit (depending on global variable celcius)
+ * 
+ * Global Variables Needed:
+ *     celcius  - true if Celcius, false if Fahrenheit
+ *****************************************************************************/
+float convertKtoCF(float kelvin) {
+  if (celcius == 0) {   // 0=Celsius, 1=Fahrenheit
+    return kelvin - 273.15; // convert to Celsius
+  }else{
+    return (kelvin - 273.15) * 1.8 + 32.0; // convert to Fahrenheit
+  }
+}
 
-void setup(void)
-{    
+/*****************************************************************************
+ * Function: setup
+ *  Sets the arduino pins, 
+ *  Initializes the Nextion display, 
+ *  Runs the Self Check routing.
+ *****************************************************************************/
+void setup(void) {
+  // Input pins
   pinMode(KEY_SWITCH_PIN, INPUT_PULLUP);
   pinMode(DOOR_PIN, INPUT_PULLUP);
+    
+  // Output pins
   pinMode(LIGHTS_PIN, OUTPUT);
   digitalWrite(LIGHTS_PIN, LOW);
+  pinMode(INTERLOCK_PIN, OUTPUT);
+  digitalWrite(INTERLOCK_PIN, LOW);
+  pinMode(ASSIST_PIN, OUTPUT);
+  digitalWrite(ASSIST_PIN, LOW);
+  pinMode(EXHAUST_PIN, OUTPUT);
+  digitalWrite(EXHAUST_PIN, LOW);
+  pinMode(POINTER_PIN, OUTPUT);
+  digitalWrite(POINTER_PIN, LOW);
+  pinMode(BUZZER_PIN, OUTPUT);
+  digitalWrite(BUZZER_PIN, LOW);
+  pinMode(PELTIER_PIN, OUTPUT);
+  digitalWrite(PELTIER_PIN, LOW);
 
+  delay(20); // allow nextion to initialize
   nexInit();
-
-  delay(10);  // allow nextion to initialize
-  selfCheck();
+  delay(10); // allow nextion to initialize
 
   /* Register the pop event callback function of the dual state button component. */
   lights_btn.attachPop(lights_btnPopCallback, &lights_btn);
-  
-  dbSerialPrintln("setup done"); 
+  assist_btn.attachPop(assist_btnPopCallback, &assist_btn);
+  pointer_btn.attachPop(pointer_btnPopCallback, &pointer_btn);
+  exhaust_btn.attachPop(exhaust_btnPopCallback, &exhaust_btn);
+
+  selfCheck();
+
+  dbSerialPrintln("setup done");
 }
 
-void loop(void)
-{   
+/*  Items to update on display
+  Ready to cut - DONE
+  turn on lights - DONE
+  turn on laser pointer - DONE
+  turn on/off exhaust fan - DONE
+  turn on alarm - DONE
+  turn off interlock relay - DONE
+  display case temp - DONE
+  display water temp - DONE
+  turn on Peltier - DONE
+  Water Flow digital display & animation
+  display power setting
+  LEVEL_PIN
+*/
+
+void loop() {
   /*
    * When a pop or push event occured every time,
    * the corresponding component[right page id and component id] in touch event list will be asked.
    */
   nexLoop(nex_listen_list);
 
-  /* Set to no faults detected, 0=ok
-      0=ok, 2=interlocks, 3=key off, 
-      4=flow rate upper limit, 5=flow rate lower limit
-      6=water temp upper limit, 7=water temp lower limit, 
-      8=case temp upper limit, 9=case temp lower limit
+  /* current_fault:
+      0=ok, 1=interlock, 2=key off, 
+      3=flow rate upper limit, 4=flow rate lower limit
+      5=water temp upper limit, 6=water temp lower limit, 
+      7=case temp upper limit, 8=case temp lower limit
   */
-  int current_fault = 0; 
+  int current_fault = 0; // Set to no faults detected, 0=ok
 
-  //skip if bypass interlock is true
-  if (!BYPASS_INTERLOCK) {
-    // Check if interlock switches were opened
-    if (digitalRead(DOOR_PIN) == LOW) {
-        current_fault = 1; //interlocks opened
-    }
-    if (digitalRead(KEY_SWITCH_PIN) == LOW) {
-        current_fault = 2; //key not turned on
-    }
-  }
-
-  // skip temp read if true
-  if (!BYPASS_WATER_TEMP) {
-    float waterTemp = readTemperature(WATER_TEMP_PIN);
-    water_temp.setFloatText(waterTemp,1);
-    if (waterTemp > WATER_TEMP_UPPER_LIMIT) {
-      current_fault = 5; //temp above upper limit
-    } else if (waterTemp < WATER_TEMP_LOWER_LIMIT) {
-      current_fault = 6; //temp below lower limit
+  // Check interlocks if set to true
+  if (PERMIT_INTERLOCK) {
+    // Check if interlock switch is open
+    if (digitalRead(DOOR_PIN) == OPEN) {
+      doorOpen = true; //interlock(s) opened
+    }else{
+      doorOpen = false;
     }
   }
-
-  //enable or disable the interlock output on any error
-  if (current_fault != 0) {
-    digitalWrite(INTERLOCK_PIN, HIGH);  // Turn off interlock relay
-  } else {
-    digitalWrite(INTERLOCK_PIN, LOW);  // Turn on interlock relay
+  // Check key switch if set to true
+  if (PERMIT_KEY) {
+    // Check if key switch is locked
+    if (digitalRead(KEY_SWITCH_PIN) == LOCKED) {
+      keySwitchOpen = true; //key not turned on
+    }else{
+      keySwitchOpen = false;
+    }
   }
-  
-  // Sound buzzer for critial errors
-  if (current_fault > 2) {
-    digitalWrite(BUZZER_PIN, HIGH); // turn alarm on
-  } else {
-    digitalWrite(BUZZER_PIN, LOW);  // turn off alarm
+  // Read temperatures if permitted water or case is true
+  if (PERMIT_WATER_TEMP || PERMIT_CASE_TEMP) {
+    // Read termistor(s) every UPDATE_TEMP_DELAY ms
+    if ((millis() - last_read_temp) > UPDATE_TEMP_DELAY) {
+      // read termistors reading every NUM_SAMPLES times, if true convert to temp
+      if (readThermistors()) {
+        if (PERMIT_WATER_TEMP) {
+          float Temp = convertToTemp(waterADC);
+
+          (Temp > WATER_TEMP_UPPER_LIMIT) ? waterHighAlarm = true : waterHighAlarm = false;
+          (Temp < WATER_TEMP_LOWER_LIMIT) ? waterLowAlarm = true : waterLowAlarm = false;
+
+          // update gauge
+
+            // Check if need to turn Peltier on or off
+            if (Temp >= WATER_TEMP_UPPER_PELTIER) {
+              if (!peltierOn) {
+                digitalWrite(PELTIER_PIN, HIGH); // Turn on Peltier 
+                peltier_pic.setPic(PELTIER_ON); // show Peltier ON picture
+                peltierOn = true;
+              }
+            } else if (Temp <= WATER_TEMP_LOWER_PELTIER) {
+              if (peltierOn) {
+                digitalWrite(PELTIER_PIN, LOW); // Turn off Peltier 
+                peltier_pic.setPic(PELTIER_OFF);// show Peltier OFF picture
+                peltierOn = false;
+              }
+            }
+
+          // Display water temp value on display
+          Temp = convertKtoCF(Temp);
+          water_temp.setFloatText(Temp, 1);
+        }
+
+        if (PERMIT_CASE_TEMP) {
+          float Temp = convertToTemp(caseADC);
+
+          (Temp > CASE_TEMP_UPPER_LIMIT) ? caseHighAlarm = true : caseHighAlarm = false;
+          (Temp < CASE_TEMP_LOWER_LIMIT) ? caseLowAlarm = true : caseLowAlarm = false;
+          
+          Temp = convertKtoCF(Temp); // Display case temp value on display
+          case_temp_num.setValue((int)Temp);
+        }
+      }
+    last_read_temp = millis();
+    }
   }
 
-  // Update the status text if status # changed
+  // check if error condition and set fault indicator
+  if (doorOpen)       current_fault = 1; //interlock opened
+  if (keySwitchOpen)  current_fault = 2; //key not turned on
+  if (waterHighAlarm) current_fault = 5; //water temp too high
+  if (waterLowAlarm)  current_fault = 6; //water temp too low
+
+  // Update the status text if status changed
   if (current_fault != prev_fault) {
-    display_text(current_fault);
+    //enable or disable the interlock output on any error
+    if (current_fault != 0) {
+      digitalWrite(INTERLOCK_PIN, LOW); // Turn off interlock relay (disabling laser)
+    }else{
+      digitalWrite(INTERLOCK_PIN, HIGH); // Turn on interlock relay (enabling laser)
+    }
+
+    // Sound buzzer for critial errors
+    if (current_fault > 2) {
+      digitalWrite(BUZZER_PIN, HIGH); // turn alarm on
+    }else{
+      digitalWrite(BUZZER_PIN, LOW); // turn off alarm
+    }
+
+    // Update status text display
+    display_status(current_fault);
     prev_fault = current_fault;
   }
-
 }
+
+/* 
+  dbSerialPrint("keySwitchOpen=");  // DEBUG 
+  dbSerialPrintln(keySwitchOpen);   // DEBUG
+*/
+
+/*  I T E M S  T O  F I X 
+  when reading temps for the first time they are really low
+*/

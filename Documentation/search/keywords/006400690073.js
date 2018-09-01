@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("dis",["Function","Constant"],[["display_status",,[[,,,,0,"File:K40_Control_Center.ino:display_status"]]],["DISPLAY_UPDATE_DELAY",,[[,,,,1,"File:K40_Control_Center.h:DISPLAY_UPDATE_DELAY"]]]]);

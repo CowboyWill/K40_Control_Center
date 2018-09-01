@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("glo",["Variable"],[["Global",,[[,"Global Variables",,,0,"File:K40_Control_Center.ino:Global_Variables"]]]]);

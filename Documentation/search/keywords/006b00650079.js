@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("key",["Macro","Variable"],[["KEY_SWITCH_PIN",,[[,,,,0,"File:K40_Control_Center.h:KEY_SWITCH_PIN"]]],["keySwitchOpen",,[[,,,,1,"File:K40_Control_Center.ino:keySwitchOpen"]]]]);

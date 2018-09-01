@@ -1,0 +1,1 @@
+NDSearch.OnPrefixDataLoaded("ass",["Variable","Function","Macro"],[["assist_btn",,[[,,,,0,"File:K40_Control_Center.ino:assist_btn"]]],["assist_btnPopCallback",,[[,,,,1,"File:K40_Control_Center.ino:assist_btnPopCallback"]]],["ASSIST_PIN",,[[,,,,2,"File:K40_Control_Center.h:ASSIST_PIN"]]]]);
