@@ -11,7 +11,7 @@
     06-25-2018
  
   Version: 
-    0.15
+    0.16
   
   See Also:
     See instruction file for hookup information.
@@ -38,48 +38,58 @@
 // Files: Include files
 //   K40_Control_Center.h - main configuration file
 //   Nextion.h            - Nextion display
-//   Flow                 - water flow library
+//   FlowMeter            - water flow library
 #include "K40_Control_Center.h"
 #include "Nextion.h"
+#include <FlowMeter.h>      // https://github.com/sekdiy/FlowMeter
 
 /****************************************************************************
  * Variables: Global Variables
- *   prev_fault - Used to display faults only when changing
- *   flowAni    - used to animate flow graphics
- *   celcius    - Celcius = 0, Fahrenheit = 1
- *   caseADC    - used to average Analog to Digital temp readings
- *   waterADC   - used to average Analog to Digital temp readings
- *   tempCount  - used to count readings for NUM_SAMPLES times
- *   prevMillis - used to determine when to do a function (stores milliseconds)
- *   last_read_temp - reads thermistor time since last changed
- *   doorOpen   - true if the door is open, false = door is closed
+ *   prev_fault     - Used to display faults only when changing
+ *   currentFlowAni - used to animate flow graphics
+ *   celcius        - Celcius = 0, Fahrenheit = 1
+ *   caseADC        - used to average Analog to Digital temp readings
+ *   waterADC       - used to average Analog to Digital temp readings
+ *   tempCount      - used to count readings for NUM_SAMPLES times
+ *   last_read_temp - stores thermistor time since last changed
+ *   doorOpen       - true if the door is open, false = door is closed
  *   keySwitchOpen  - true if key switch is open, false if key closed
+ *   flowHighAlarm  - true if water flow too HIGH
+ *   flowLowAlarm   - true if water flow too LOW
  *   waterHighAlarm - true if water temp too HIGH
  *   waterLowAlarm  - true if water temp too LOW
  *   caseHighAlarm  - true if case temp too HIGH
  *   caseLowAlarm   - true if case temp too LOW
  *   peltierOn      - indicates if peltier is ON
+ *   Meter          - Flow Meter class object
+ *   last_read_flow - stores flow reading time since last changed
+ *   last_flow_ani  - stores flow animation time since last changed
  *   
  ****************************************************************************/
 int prev_fault = 1;
 
-byte flowAni = 0;
+byte currentFlowAni = 0;
 
 uint32_t celcius;
 unsigned int caseADC = 0;
 unsigned int waterADC = 0;
 byte tempCount = 0;
 
-unsigned long prevMillis = millis();
 unsigned long last_read_temp = millis() - UPDATE_TEMP_DELAY;
 
 byte doorOpen = false;
 byte keySwitchOpen = false;
+byte flowHighAlarm = false;
+byte flowLowAlarm = false;
 byte waterHighAlarm = false;
 byte waterLowAlarm = false;
 byte caseHighAlarm = false;
 byte caseLowAlarm = false;
 byte peltierOn = false;
+
+FlowMeter Meter = FlowMeter(WATER_FLOW_PIN);
+unsigned long last_read_flow = millis() - UPDATE_FLOW_DELAY;
+unsigned long last_flow_ani = millis() - UPDATE_FLOW_DELAY;
 
 /*****************************************************************************
  * Variables: Nextion components for home page
@@ -106,6 +116,8 @@ NexDSButton assist_btn      = NexDSButton(1, 14, "assist_btn");
 NexDSButton exhaust_btn     = NexDSButton(1, 15, "exhaust_btn");
 NexDSButton pointer_btn     = NexDSButton(1, 16, "pointer_btn");
 NexPicture peltier_pic      = NexPicture(1, 17, "peltier_pic");
+NexNumber flow_num          = NexNumber(1, 19, "flow_num");
+NexPicture flow_ani         = NexPicture(1, 20, "flow_ani");
 
 // Variable: nex_listen_list
 //   List of all Nextion objects that will return a value, e.g. buttons
@@ -116,6 +128,14 @@ NexTouch *nex_listen_list[] = {
   &exhaust_btn,
   NULL
 };
+
+/*****************************************************************************
+ * Function: MeterISR
+ * define an 'interrupt service handler' (ISR) for Flow Meter interrupt pin
+ *****************************************************************************/
+void MeterISR() {
+  Meter.count();  // count the pulses every time the flow meters triggers an interrupt
+}
 
 /*****************************************************************************
  * Function: display_status  
@@ -150,6 +170,7 @@ void selfCheck() {
   while (!readThermistors());
 
   delay(2000); // wait  before moving to home page
+  Meter.tick(2000);  // Read flow and throw away first set of readings
   home.show();
   delay(10);
   dbSerialPrintln("END Self Check");
@@ -290,6 +311,7 @@ void setup(void) {
   // Input pins
   pinMode(KEY_SWITCH_PIN, INPUT_PULLUP);
   pinMode(DOOR_PIN, INPUT_PULLUP);
+  pinMode(WATER_FLOW_PIN, INPUT_PULLUP);
     
   // Output pins
   pinMode(LIGHTS_PIN, OUTPUT);
@@ -317,6 +339,13 @@ void setup(void) {
   pointer_btn.attachPop(pointer_btnPopCallback, &pointer_btn);
   exhaust_btn.attachPop(exhaust_btnPopCallback, &exhaust_btn);
 
+  // enable a call to the 'interrupt service handler' (ISR) on every rising edge at the interrupt pin
+  attachInterrupt(FLOW_INTERRUPT, MeterISR, RISING);
+
+  // sometimes initializing the gear generates some pulses that we should ignore
+  Meter.reset();
+
+  // Run a self check of the sytem, page 0 of Nextion
   selfCheck();
 
   dbSerialPrintln("setup done");
@@ -332,7 +361,7 @@ void setup(void) {
   display case temp - DONE
   display water temp - DONE
   turn on Peltier - DONE
-  Water Flow digital display & animation
+  Water Flow digital display & animation - DONE
   display power setting
   LEVEL_PIN
 */
@@ -418,9 +447,46 @@ void loop() {
     }
   }
 
+  // Read flow if permitted is true
+  if (PERMIT_FLOW) {
+    // Read flow termistor(s) every UPDATE_TEMP_DELAY ms
+    if ((millis() - last_read_flow) > UPDATE_FLOW_DELAY) {
+      // process the (possibly) counted ticks
+      Meter.tick(UPDATE_FLOW_DELAY);
+
+      // output some measurement result
+      dbSerialPrintln("Currently " + String(Meter.getCurrentFlowrate()) + " l/min, " + String(Meter.getTotalVolume())+ " l total.");
+
+      // Update nextion display
+      float flowRate = Meter.getCurrentFlowrate();
+      (flowRate > FLOW_RATE_UPPER_LIMIT) ? flowHighAlarm = true : flowHighAlarm = false;
+      (flowRate < FLOW_RATE_LOWER_LIMIT) ? flowLowAlarm = true : flowLowAlarm = false;
+
+      //display the flow rate number (integer)
+      flow_num.setValue((int)flowRate);
+
+      last_read_flow = millis();
+    }
+
+    // Display the flow animation
+    if ( (millis() - last_flow_ani) > FLOW_ANI_DELAY) {
+      // Only animate if flowRate > 0
+      if (Meter.getCurrentFlowrate() > 0.0) { 
+        flow_ani.setPic(currentFlowAni+ANI_START_PIC);
+        currentFlowAni++;
+        if (currentFlowAni == ANI_PICS) currentFlowAni = 0;
+      }
+      last_flow_ani = millis();
+    }
+
+  }
+
+
   // check if error condition and set fault indicator
   if (doorOpen)       current_fault = 1; //interlock opened
   if (keySwitchOpen)  current_fault = 2; //key not turned on
+  if (flowHighAlarm)  current_fault = 3; //flow too high
+  if (flowLowAlarm)   current_fault = 4; //flow too low
   if (waterHighAlarm) current_fault = 5; //water temp too high
   if (waterLowAlarm)  current_fault = 6; //water temp too low
 

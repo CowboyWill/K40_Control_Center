@@ -25,9 +25,10 @@ __To Do:__
   - [x] Add Laser Pointer code, test relay
   - [x] Add Exhaust fan code, test relay
   - [x] Add Air Assist code, test relay
-  - [ ] Add Flow Meter number code
-  - [ ] Add Flow Meter animation
+  - [x] Add Flow Meter number code
+  - [x] Add Flow Meter animation
   - [ ] Calibrate Water Flow meter
+  - [ ] Add Water Gauge code
   - [ ] Calibrate Water Temp gauge
   - [ ] Add buzzer 
   - [ ] Add Adafruit Audio FX Mini Sound Board code

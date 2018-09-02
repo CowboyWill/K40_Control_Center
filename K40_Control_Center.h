@@ -1,5 +1,5 @@
 /***************************************************************************** 
- * File: K40_Control_Center.
+ * File: K40_Control_Center.h
  *   Header file for K40_Control_Center.ino
  * 
  *   Defines: Pinouts of Arduino
@@ -148,22 +148,23 @@ const bool PERMIT_KEY = true;
 /***************************************************************************** 
  * Constants: Flow Rate Variables
  *     PERMIT_FLOW    - set to false to ignore the flow sensor
+ *     FLOW_RATE_UPPER_LIMIT - (gal per minute)upper limit of flow rate
+ *     FLOW_RATE_LOWER_LIMIT - (gal per minute)lower limit of flow rate
+ *     UPDATE_FLOW_DELAY  - set the measurement update period in ms
+ *     FLOW_INTERRUPT     - interrupt pin for flow meter
  *     ANI_START_PIC  - Which image is the first for flow animation (Nextion pic #)
  *     ANI_PICS       - How many images are in the flow animation
  *     FLOW_ANI_DELAY - Animation delay in ms
- *     FLOW_RATE_UPPER_LIMIT - (gal per minute)upper limit of flow rate
- *     FLOW_RATE_LOWER_LIMIT - (gal per minute)lower limit of flow rate
- *     PULSES_PER_LITER - How many pulses per liter
- *     FLOW_RATE_MEASURE_INTERVAL - ????????????????
 *****************************************************************************/
-const bool PERMIT_FLOW = false; 
-const uint32_t ANI_START_PIC = 1;
-const uint32_t ANI_PICS = 4;
-const unsigned long FLOW_ANI_DELAY = 200;
+const bool PERMIT_FLOW = true; 
 const float FLOW_RATE_UPPER_LIMIT = 15.0;
 const float FLOW_RATE_LOWER_LIMIT = 2.0;
-const int PULSES_PER_LITER = 450;
-const float FLOW_RATE_MEASURE_INTERVAL = 1000.0;   // Do i need this?
+const unsigned long UPDATE_FLOW_DELAY = 500; // 1000ms = 1sec
+const byte FLOW_INTERRUPT = digitalPinToInterrupt(WATER_FLOW_PIN);
+
+const byte ANI_PICS = 4;
+const byte ANI_START_PIC = 21;
+const unsigned long FLOW_ANI_DELAY = 200;
 
 /***************************************************************************** 
  * Constants: Temperature Variables
