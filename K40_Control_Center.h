@@ -7,7 +7,7 @@
  *   These are pinouts for both Arduino
  * 
  *  WATER_FLOW_PIN - Water flow monitor(?????? to INT0, black to ground)
- *  KEY_SWITCH_PIN - Key switch (NC contact 1 to gnd, contact 2 to PIN)
+ *  KEY_PIN        - Key switch (NC contact 1 to gnd, contact 2 to PIN)
  *  BUZZER_PIN     - Warning buzzer (Buzzer+ to PIN, buzzer- to ground)
  *  INTERLOCK_PIN  - Relay to disable laser (+5V to relay VCC, PIN to Relay IN,
  *                   laser enable1 to relay common, laser enable2 to relay NO)
@@ -31,7 +31,7 @@
 #if defined(ARDUINO_AVR_UNO)
   //Nano specific code
   #define WATER_FLOW_PIN  32  //D2
-  #define KEY_SWITCH_PIN  1   //D3
+  #define KEY_PIN         1   //D3
   #define BUZZER_PIN      2   //D4
   #define INTERLOCK_PIN   9   //D5 
   #define PELTIER_PIN     10  //D6 
@@ -101,24 +101,26 @@
           \_______________________/         
          http://busyducks.com/ascii-art-arduinos   */
 
-  #define WATER_FLOW_PIN  2  //INT
-  #define DOOR_PIN        3
-  #define KEY_SWITCH_PIN  4
-  #define INTERLOCK_PIN   5
-  #define PELTIER_PIN     6
-  #define BUZZER_PIN      8
-  #define LIGHTS_PIN      9
-  #define ASSIST_PIN      10
-  #define EXHAUST_PIN     11
-  #define POINTER_PIN     12
-  #define WATER_TEMP_PIN  0  //A0
-  #define CASE_TEMP_PIN   1  //A1
-  
-  
-  #define POWER_PIN       23  //D14/A0
-  #define LEVEL_PIN       24  //D15/A1
-  #define CURRENT_SDA_PIN 27  //A4
-  #define CURRENT_SCL_PIN 28  //A5
+  #define WATER_FLOW_PIN    2  //INT
+  #define KEY_PIN           3
+  #define DOOR_PIN          4
+  #define INTERLOCK_PIN     5
+  #define PELTIER_PIN       6
+  #define BUZZER_PIN        7
+  #define POINTER_PIN       8
+  #define LIGHTS_PIN        9
+  #define AUDIO_FX_TX_PIN  10
+  #define AUDIO_FX_RX_PIN  11
+  #define AUDIO_FX_RST_PIN 12
+  #define POWER_PIN        A0
+  #define ASSIST_PIN       A2
+  #define EXHAUST_PIN      A3
+  #define WATER_TEMP_PIN   A6
+  #define CASE_TEMP_PIN    A7
+
+  #define LEVEL_PIN        A1
+  #define CURRENT_SDA_PIN  A4
+  #define CURRENT_SCL_PIN  A5
 #endif
 
 //////////////////////////////////////////////////////////////////////////////
@@ -200,13 +202,13 @@ const int NUM_SAMPLES = 5;
 
 /***************************************************************************** 
  * Constants: Peliter
- *    PERMIT_PELTIER     - set to false to ignore peltier
+ *    PERMIT_PELTIER           - set to false to ignore peltier
  *    WATER_TEMP_UPPER_PELTIER - Upper temp to turn on Peltier
  *    WATER_TEMP_LOWER_PELTIER - Lower temp to turn off Peltier
- *    PELTIER_OFF        - picture number of peltier turned off
- *    PELTIER_ON         - picture number of peltier turned on
+ *    PELTIER_OFF              - picture number of peltier turned off
+ *    PELTIER_ON               - picture number of peltier turned on
 *****************************************************************************/
-const bool PERMIT_PELTIER = false;
+const bool PERMIT_PELTIER = true;
 const float WATER_TEMP_UPPER_PELTIER = 310.15; // (300.15K / 30C)
 const float WATER_TEMP_LOWER_PELTIER = 308.15; // (296.15K / 30C)
 const byte PELTIER_OFF = 19;
@@ -216,11 +218,11 @@ const byte PELTIER_ON = 20;
  * Constants: MISC settings Variables
  *    OPEN                 - Door setting if opened
  *    LOCKED               - Key locked (disable laser)
- *    DISPLAY_UPDATE_DELAY - update Nextion display every 1 second (1000ms)
+ *    DISPLAY_UPDATE_DELAY - update Nextion display every ms
 *****************************************************************************/
 const bool OPEN = LOW;
 const bool LOCKED = LOW;
-const float DISPLAY_UPDATE_DELAY = 1000.0;
+const unsigned long DISPLAY_UPDATE_DELAY = 200;
 
 
 /*  Temp limits from different sources

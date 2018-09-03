@@ -11,7 +11,7 @@
     06-25-2018
  
   Version: 
-    0.16
+    0.17
   
   See Also:
     See instruction file for hookup information.
@@ -45,25 +45,26 @@
 
 /****************************************************************************
  * Variables: Global Variables
- *   prev_fault     - Used to display faults only when changing
- *   currentFlowAni - used to animate flow graphics
- *   celcius        - Celcius = 0, Fahrenheit = 1
- *   caseADC        - used to average Analog to Digital temp readings
- *   waterADC       - used to average Analog to Digital temp readings
- *   tempCount      - used to count readings for NUM_SAMPLES times
- *   last_read_temp - stores thermistor time since last changed
- *   doorOpen       - true if the door is open, false = door is closed
- *   keySwitchOpen  - true if key switch is open, false if key closed
- *   flowHighAlarm  - true if water flow too HIGH
- *   flowLowAlarm   - true if water flow too LOW
- *   waterHighAlarm - true if water temp too HIGH
- *   waterLowAlarm  - true if water temp too LOW
- *   caseHighAlarm  - true if case temp too HIGH
- *   caseLowAlarm   - true if case temp too LOW
- *   peltierOn      - indicates if peltier is ON
- *   Meter          - Flow Meter class object
- *   last_read_flow - stores flow reading time since last changed
- *   last_flow_ani  - stores flow animation time since last changed
+ *   prev_fault          - Used to display faults only when changing
+ *   currentFlowAni      - used to animate flow graphics
+ *   celcius             - Celcius = 0, Fahrenheit = 1
+ *   caseADC             - used to average Analog to Digital temp readings
+ *   waterADC            - used to average Analog to Digital temp readings
+ *   tempCount           - used to count readings for NUM_SAMPLES times
+ *   last_read_temp      - stores last time thermistor changed
+ *   doorOpen            - true if the door is open, false = door is closed
+ *   keySwitchOpen       - true if key switch is open, false if key closed
+ *   flowHighAlarm       - true if water flow too HIGH
+ *   flowLowAlarm        - true if water flow too LOW
+ *   waterHighAlarm      - true if water temp too HIGH
+ *   waterLowAlarm       - true if water temp too LOW
+ *   caseHighAlarm       - true if case temp too HIGH
+ *   caseLowAlarm        - true if case temp too LOW
+ *   peltierOn           - indicates if peltier is ON
+ *   Meter               - Flow Meter class object
+ *   last_read_flow      - stores last time water flow changed
+ *   last_flow_ani       - stores last time flow animation changed
+ *   last_display_update - stores last time display updated
  *   
  ****************************************************************************/
 int prev_fault = 1;
@@ -89,7 +90,8 @@ byte peltierOn = false;
 
 FlowMeter Meter = FlowMeter(WATER_FLOW_PIN);
 unsigned long last_read_flow = millis() - UPDATE_FLOW_DELAY;
-unsigned long last_flow_ani = millis() - UPDATE_FLOW_DELAY;
+unsigned long last_flow_ani = millis() - FLOW_ANI_DELAY;
+unsigned long last_display_update = millis() - DISPLAY_UPDATE_DELAY;
 
 /*****************************************************************************
  * Variables: Nextion components for home page
@@ -118,6 +120,7 @@ NexDSButton pointer_btn     = NexDSButton(1, 16, "pointer_btn");
 NexPicture peltier_pic      = NexPicture(1, 17, "peltier_pic");
 NexNumber flow_num          = NexNumber(1, 19, "flow_num");
 NexPicture flow_ani         = NexPicture(1, 20, "flow_ani");
+NexNumber ps_num            = NexNumber(1, 25, "ps_num");
 
 // Variable: nex_listen_list
 //   List of all Nextion objects that will return a value, e.g. buttons
@@ -173,6 +176,17 @@ void selfCheck() {
   Meter.tick(2000);  // Read flow and throw away first set of readings
   home.show();
   delay(10);
+
+  // turn off Peltier if not permitted
+  //  NOT WORKING @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+  if (!PERMIT_PELTIER) sendCommand("peltier_pic.vis,0");
+  // turn off Case Temp if not permitted
+  if (!PERMIT_CASE_TEMP) {
+    sendCommand("case_txt.vis,0");
+    sendCommand("case_temp_num.vis,0");
+    sendCommand("case_cf.vis,0");
+  }
+  
   dbSerialPrintln("END Self Check");
 }
 
@@ -309,7 +323,7 @@ float convertKtoCF(float kelvin) {
  *****************************************************************************/
 void setup(void) {
   // Input pins
-  pinMode(KEY_SWITCH_PIN, INPUT_PULLUP);
+  pinMode(KEY_PIN, INPUT_PULLUP);
   pinMode(DOOR_PIN, INPUT_PULLUP);
   pinMode(WATER_FLOW_PIN, INPUT_PULLUP);
     
@@ -362,8 +376,9 @@ void setup(void) {
   display water temp - DONE
   turn on Peltier - DONE
   Water Flow digital display & animation - DONE
-  display power setting
-  LEVEL_PIN
+  display power setting - DONE
+  Water level 
+  hide case temp, water temp, flow, peltier 
 */
 
 void loop() {
@@ -393,7 +408,7 @@ void loop() {
   // Check key switch if set to true
   if (PERMIT_KEY) {
     // Check if key switch is locked
-    if (digitalRead(KEY_SWITCH_PIN) == LOCKED) {
+    if (digitalRead(KEY_PIN) == LOCKED) {
       keySwitchOpen = true; //key not turned on
     }else{
       keySwitchOpen = false;
@@ -412,7 +427,7 @@ void loop() {
           (Temp < WATER_TEMP_LOWER_LIMIT) ? waterLowAlarm = true : waterLowAlarm = false;
 
           // update gauge
-
+          if (PERMIT_PELTIER) {
             // Check if need to turn Peltier on or off
             if (Temp >= WATER_TEMP_UPPER_PELTIER) {
               if (!peltierOn) {
@@ -420,13 +435,15 @@ void loop() {
                 peltier_pic.setPic(PELTIER_ON); // show Peltier ON picture
                 peltierOn = true;
               }
-            } else if (Temp <= WATER_TEMP_LOWER_PELTIER) {
+            }
+            if (Temp <= WATER_TEMP_LOWER_PELTIER) {
               if (peltierOn) {
                 digitalWrite(PELTIER_PIN, LOW); // Turn off Peltier 
                 peltier_pic.setPic(PELTIER_OFF);// show Peltier OFF picture
                 peltierOn = false;
               }
             }
+          }
 
           // Display water temp value on display
           Temp = convertKtoCF(Temp);
@@ -468,7 +485,7 @@ void loop() {
       last_read_flow = millis();
     }
 
-    // Display the flow animation
+  // Display the flow animation
     if ( (millis() - last_flow_ani) > FLOW_ANI_DELAY) {
       // Only animate if flowRate > 0
       if (Meter.getCurrentFlowrate() > 0.0) { 
@@ -481,6 +498,19 @@ void loop() {
 
   }
 
+  // Display the rest of the items on the display
+  if ( (millis() - last_display_update) > DISPLAY_UPDATE_DELAY) {
+    // Update Power percentage from Power potentometer
+    int powerVal = analogRead(POWER_PIN);  // read the power pot value
+    dbSerialPrint("Power =" + String(powerVal));
+    powerVal = map(powerVal, 0, 1023, 0, 100);  // convert analog value to %
+    dbSerialPrintln("  Percentage=" + String(powerVal));
+    ps_num.setValue(powerVal);
+
+    // Update Power Current
+    // ...
+    last_display_update = millis();
+  }
 
   // check if error condition and set fault indicator
   if (doorOpen)       current_fault = 1; //interlock opened
@@ -518,5 +548,5 @@ void loop() {
 */
 
 /*  I T E M S  T O  F I X 
-  when reading temps for the first time they are really low
+  Turn off visibility for objects not used
 */
