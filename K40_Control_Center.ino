@@ -111,6 +111,7 @@ NexVariable celcius_va = NexVariable(0, 2, "vacf");
 
 NexPage home              = NexPage(1, 0, "home");
 NexScrolltext status_txt    = NexScrolltext(1, 4, "status_txt");
+NexGauge water_gauge        = NexGauge(1, 6, "water_gauge");
 NexText water_temp          = NexText(1, 7, "water_temp");
 NexDSButton lights_btn      = NexDSButton(1, 9, "lights_btn");
 NexNumber case_temp_num     = NexNumber(1, 13, "case_temp_num");
@@ -322,6 +323,7 @@ float convertKtoCF(float kelvin) {
  *  Runs the Self Check routing.
  *****************************************************************************/
 void setup(void) {
+  ///////////////////////////// PINS /////////////////////////////////////////
   // Input pins
   pinMode(KEY_PIN, INPUT_PULLUP);
   pinMode(DOOR_PIN, INPUT_PULLUP);
@@ -343,49 +345,30 @@ void setup(void) {
   pinMode(PELTIER_PIN, OUTPUT);
   digitalWrite(PELTIER_PIN, LOW);
 
+  ////////////////////////////// SETUP NEXTION ///////////////////////////////
   delay(20); // allow nextion to initialize
   nexInit();
   delay(10); // allow nextion to initialize
 
-  /* Register the pop event callback function of the dual state button component. */
+  // Register pop callback function for each button component
   lights_btn.attachPop(lights_btnPopCallback, &lights_btn);
   assist_btn.attachPop(assist_btnPopCallback, &assist_btn);
   pointer_btn.attachPop(pointer_btnPopCallback, &pointer_btn);
   exhaust_btn.attachPop(exhaust_btnPopCallback, &exhaust_btn);
 
+  ////////////////////////////// FLOW METER //////////////////////////////////
   // enable a call to the 'interrupt service handler' (ISR) on every rising edge at the interrupt pin
   attachInterrupt(FLOW_INTERRUPT, MeterISR, RISING);
+  Meter.reset();   // reset meter variables to 0
 
-  // sometimes initializing the gear generates some pulses that we should ignore
-  Meter.reset();
-
-  // Run a self check of the sytem, page 0 of Nextion
+  ////////////// Run a self check of the sytem, page 0 of Nextion ////////////
   selfCheck();
 
   dbSerialPrintln("setup done");
 }
 
-/*  Items to update on display
-  Ready to cut - DONE
-  turn on lights - DONE
-  turn on laser pointer - DONE
-  turn on/off exhaust fan - DONE
-  turn on alarm - DONE
-  turn off interlock relay - DONE
-  display case temp - DONE
-  display water temp - DONE
-  turn on Peltier - DONE
-  Water Flow digital display & animation - DONE
-  display power setting - DONE
-  Water level 
-  hide case temp, water temp, flow, peltier 
-*/
-
 void loop() {
-  /*
-   * When a pop or push event occured every time,
-   * the corresponding component[right page id and component id] in touch event list will be asked.
-   */
+  /////////////// Check each object to see if any were triggered /////////////
   nexLoop(nex_listen_list);
 
   /* current_fault:
@@ -396,16 +379,16 @@ void loop() {
   */
   int current_fault = 0; // Set to no faults detected, 0=ok
 
-  // Check interlocks if set to true
+  //////////////////// Check interlocks if set to true ///////////////////////
   if (PERMIT_INTERLOCK) {
     // Check if interlock switch is open
-    if (digitalRead(DOOR_PIN) == OPEN) {
+    if (digitalRead(DOOR_PIN) == DOOR_OPEN) {
       doorOpen = true; //interlock(s) opened
     }else{
       doorOpen = false;
     }
   }
-  // Check key switch if set to true
+  ///////////////////// Check key switch if set to true //////////////////////
   if (PERMIT_KEY) {
     // Check if key switch is locked
     if (digitalRead(KEY_PIN) == LOCKED) {
@@ -414,7 +397,7 @@ void loop() {
       keySwitchOpen = false;
     }
   }
-  // Read temperatures if permitted water or case is true
+  /////////////////////////// Read Temperatures //////////////////////////////
   if (PERMIT_WATER_TEMP || PERMIT_CASE_TEMP) {
     // Read termistor(s) every UPDATE_TEMP_DELAY ms
     if ((millis() - last_read_temp) > UPDATE_TEMP_DELAY) {
@@ -426,7 +409,7 @@ void loop() {
           (Temp > WATER_TEMP_UPPER_LIMIT) ? waterHighAlarm = true : waterHighAlarm = false;
           (Temp < WATER_TEMP_LOWER_LIMIT) ? waterLowAlarm = true : waterLowAlarm = false;
 
-          // update gauge
+          // Update Peltier on or off
           if (PERMIT_PELTIER) {
             // Check if need to turn Peltier on or off
             if (Temp >= WATER_TEMP_UPPER_PELTIER) {
@@ -444,6 +427,25 @@ void loop() {
               }
             }
           }
+
+          ////////////////////// Update Water Gauge //////////////////////////
+          // Gauge has a range of -31(329) to 211
+          // 0 = straight left,  -1 = 359, 90 = straight up
+          // Good range = 50deg, Hot Range = 130
+          // 80 degrees between each range (-31 to 211 = 240)
+          // Map command converts one range of numbers to another
+          //    map(value, fromLow, fromHigh, toLow, toHigh)
+          int gauge_val = map(Temp, 
+                              WATER_TEMP_LOWER_LIMIT-WATER_TEMP_LIMIT_DIFF, 
+                              WATER_TEMP_UPPER_LIMIT+WATER_TEMP_LIMIT_DIFF,
+                              -31, 211);
+          // Check if value a negative number, if so 360 - value (360+negative value)
+          if (gauge_val < 0) {
+            gauge_val+=360;
+          }
+          dbSerialPrintln("Temp="+String(Temp)+"  gauge_val=" + String(gauge_val));
+          // water_gauge.setValue(gauge_val);
+          water_gauge.setValue(gauge_val);
 
           // Display water temp value on display
           Temp = convertKtoCF(Temp);
@@ -464,7 +466,7 @@ void loop() {
     }
   }
 
-  // Read flow if permitted is true
+  /////////////////////////// Read Water Flow //////////////////////////////
   if (PERMIT_FLOW) {
     // Read flow termistor(s) every UPDATE_TEMP_DELAY ms
     if ((millis() - last_read_flow) > UPDATE_FLOW_DELAY) {
@@ -485,7 +487,7 @@ void loop() {
       last_read_flow = millis();
     }
 
-  // Display the flow animation
+    // Display the flow animation
     if ( (millis() - last_flow_ani) > FLOW_ANI_DELAY) {
       // Only animate if flowRate > 0
       if (Meter.getCurrentFlowrate() > 0.0) { 
@@ -498,7 +500,7 @@ void loop() {
 
   }
 
-  // Display the rest of the items on the display
+  /////////////////////// Display rest of items //////////////////////////////
   if ( (millis() - last_display_update) > DISPLAY_UPDATE_DELAY) {
     // Update Power percentage from Power potentometer
     int powerVal = analogRead(POWER_PIN);  // read the power pot value
@@ -520,7 +522,7 @@ void loop() {
   if (waterHighAlarm) current_fault = 5; //water temp too high
   if (waterLowAlarm)  current_fault = 6; //water temp too low
 
-  // Update the status text if status changed
+  /////////////// Update status text only if status changed //////////////////
   if (current_fault != prev_fault) {
     //enable or disable the interlock output on any error
     if (current_fault != 0) {
@@ -531,9 +533,9 @@ void loop() {
 
     // Sound buzzer for critial errors
     if (current_fault > 2) {
-      digitalWrite(BUZZER_PIN, HIGH); // turn alarm on
+      digitalWrite(BUZZER_PIN, ALARM_ON); // turn alarm on
     }else{
-      digitalWrite(BUZZER_PIN, LOW); // turn off alarm
+      digitalWrite(BUZZER_PIN, ALARM_OFF); // turn off alarm
     }
 
     // Update status text display
@@ -545,6 +547,8 @@ void loop() {
 /* 
   dbSerialPrint("keySwitchOpen=");  // DEBUG 
   dbSerialPrintln(keySwitchOpen);   // DEBUG
+          or
+  dbSerialPrintln("keySwitchOpen=" + String(keySwitchOpen));   // DEBUG
 */
 
 /*  I T E M S  T O  F I X 

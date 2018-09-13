@@ -185,6 +185,7 @@ const int UPDATE_TEMP_DELAY = 100;
 const bool PERMIT_WATER_TEMP = true;
 const float WATER_TEMP_LOWER_LIMIT = 303.15; // (293.15K / 20C)
 const float WATER_TEMP_UPPER_LIMIT = 318.15; // (303.15K / 30C)
+const float WATER_TEMP_LIMIT_DIFF = WATER_TEMP_UPPER_LIMIT - WATER_TEMP_LOWER_LIMIT;
 
 const bool PERMIT_CASE_TEMP = true;
 const float CASE_TEMP_LOWER_LIMIT = 10.0;    // (5C / 41F)
@@ -202,7 +203,7 @@ const int NUM_SAMPLES = 5;
 
 /***************************************************************************** 
  * Constants: Peliter
- *    PERMIT_PELTIER           - set to false to ignore peltier
+ *    PERMIT_PELTIER           - set to true for peltier.  Only works if PERMIT_WATER_TEMP is true
  *    WATER_TEMP_UPPER_PELTIER - Upper temp to turn on Peltier
  *    WATER_TEMP_LOWER_PELTIER - Lower temp to turn off Peltier
  *    PELTIER_OFF              - picture number of peltier turned off
@@ -216,12 +217,16 @@ const byte PELTIER_ON = 20;
 
 /*****************************************************************************
  * Constants: MISC settings Variables
- *    OPEN                 - Door setting if opened
+ *    DOOR_OPEN                 - Door setting if opened
  *    LOCKED               - Key locked (disable laser)
+ *    ALARM_ON             - Constant to turn alarm on
+ *    ALARM_OFF            - Constant to turn alarm off
  *    DISPLAY_UPDATE_DELAY - update Nextion display every ms
 *****************************************************************************/
-const bool OPEN = LOW;
+const bool DOOR_OPEN = HIGH;
 const bool LOCKED = LOW;
+const bool ALARM_ON = LOW;
+const bool ALARM_OFF = HIGH;
 const unsigned long DISPLAY_UPDATE_DELAY = 200;
 
 
