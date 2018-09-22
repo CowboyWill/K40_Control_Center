@@ -38,10 +38,14 @@
 // Files: Include files
 //   K40_Control_Center.h - main configuration file
 //   Nextion.h            - Nextion display
-//   FlowMeter            - water flow library
+//   FlowMeter.h          - water flow library
+//   SoftwareSerial.h     - Software Serial for Adafruit soundboard
+//   Adafruit_Soundboard.h- Adafruit soundboard
 #include "K40_Control_Center.h"
 #include "Nextion.h"
 #include <FlowMeter.h>      // https://github.com/sekdiy/FlowMeter
+#include <SoftwareSerial.h>
+#include "Adafruit_Soundboard.h"
 
 /****************************************************************************
  * Variables: Global Variables
@@ -65,9 +69,11 @@
  *   last_read_flow      - stores last time water flow changed
  *   last_flow_ani       - stores last time flow animation changed
  *   last_display_update - stores last time display updated
+ *   ss                  - Software Serial for Adafruit Soundboard
+ *   sfx                 - Adafruit SoundBoard
  *   
  ****************************************************************************/
-int prev_fault = 1;
+byte prev_fault = 1;
 
 byte currentFlowAni = 0;
 
@@ -92,6 +98,12 @@ FlowMeter Meter = FlowMeter(WATER_FLOW_PIN);
 unsigned long last_read_flow = millis() - UPDATE_FLOW_DELAY;
 unsigned long last_flow_ani = millis() - FLOW_ANI_DELAY;
 unsigned long last_display_update = millis() - DISPLAY_UPDATE_DELAY;
+
+SoftwareSerial ss = SoftwareSerial(AUDIO_FX_TX_PIN, AUDIO_FX_RX_PIN);
+Adafruit_Soundboard sfx = Adafruit_Soundboard(&ss, NULL, AUDIO_FX_RST_PIN);
+// can also try hardware serial with
+// Adafruit_Soundboard sfx = Adafruit_Soundboard(&Serial1, NULL, AUDIO_FX_RST_PIN);
+
 
 /*****************************************************************************
  * Variables: Nextion components for home page
@@ -148,7 +160,7 @@ void MeterISR() {
  * Argument:
  *   fault - number of message to display from MESSAGES array
  *****************************************************************************/
-void display_status(int fault) {
+void display_status(byte fault) {
   // 0 = No fault, scroll text
   if (fault == 0) {
     status_txt.Set_scroll_dir(1);       // scroll right to left
@@ -158,6 +170,12 @@ void display_status(int fault) {
     status_txt.Set_scroll_distance(40); // this causes it to flash (height of box)
   }
   status_txt.setText(MESSAGES[fault]);
+
+  // Speak error message
+  if(PERMIT_SOUND) {
+    // sfx.stop();
+    if (! sfx.playTrack(SPEECH[fault])) dbSerialPrintln("Failed to play sound track "+String(fault));
+  }
 }
 
 /*****************************************************************************
@@ -211,6 +229,12 @@ void assist_btnPopCallback(void *ptr)
   // Get the state value of dual state button component.
   assist_btn.getValue(&dual_state);
   digitalWrite(ASSIST_PIN, dual_state);  // Turn on or off air assist
+  // Speak Air Assist turned on
+  if(PERMIT_SOUND) {
+    // sfx.stop();
+    if (! sfx.playTrack(SPEECH[9])) dbSerialPrintln("Failed to play sound T09 Air Assist");
+  }
+
 }
 /*****************************************************************************
  * Function: pointer_btnPopCallback
@@ -357,9 +381,22 @@ void setup(void) {
   exhaust_btn.attachPop(exhaust_btnPopCallback, &exhaust_btn);
 
   ////////////////////////////// FLOW METER //////////////////////////////////
-  // enable a call to the 'interrupt service handler' (ISR) on every rising edge at the interrupt pin
-  attachInterrupt(FLOW_INTERRUPT, MeterISR, RISING);
-  Meter.reset();   // reset meter variables to 0
+  if (PERMIT_FLOW) {
+    // enable a call to the 'interrupt service handler' (ISR) on every rising edge at the interrupt pin
+    attachInterrupt(FLOW_INTERRUPT, MeterISR, RISING);
+    Meter.reset();   // reset meter variables to 0
+  }
+
+  //////////////////////// Setup Adafruit Soundboard ////////////////////////
+  if (PERMIT_SOUND) {
+    ss.begin(9600);   // softwareserial at 9600 baud (can also do Serial1.begin(9600))
+
+    if (!sfx.reset()) {
+      dbSerialPrintln("Adafruit Soundboard Not found");
+      PERMIT_SOUND = false;
+    }
+
+  }
 
   ////////////// Run a self check of the sytem, page 0 of Nextion ////////////
   selfCheck();
@@ -377,7 +414,7 @@ void loop() {
       5=water temp upper limit, 6=water temp lower limit, 
       7=case temp upper limit, 8=case temp lower limit
   */
-  int current_fault = 0; // Set to no faults detected, 0=ok
+  byte current_fault = 0; // Set to no faults detected, 0=ok
 
   //////////////////// Check interlocks if set to true ///////////////////////
   if (PERMIT_INTERLOCK) {

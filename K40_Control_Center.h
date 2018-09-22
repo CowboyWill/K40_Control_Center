@@ -139,6 +139,32 @@ const char MESSAGES[9][28] = {
 };
 
 //////////////////////////////////////////////////////////////////////////////
+// Constant: SPEECH
+//   contains an array of filenames for the speech module
+// T00.ogg  - Laser ready to run
+// T01.ogg  - Warning, case open, laser deactivated
+// T02.ogg  - Laser deactivated, key turned off
+// T03.ogg  - Critical Warning... Water flow too high
+// T04.ogg  - Critical Warning... Water flow too low
+// T05.ogg  - Critical Warning... Water Temperature too high
+// T06.ogg  - Critical Warning... Water Temperature too low
+// T07.ogg  - Warning... Case Temperature too high
+// T08.ogg  - Warning... Case Temperature too low
+// T09.ogg  - Air Assist turned on
+char SPEECH[10][13] = {
+  "T00     OGG",
+  "T01     OGG",
+  "T02     OGG",
+  "T03     OGG", 
+  "T04     OGG",
+  "T05     OGG",
+  "T06     OGG",
+  "T07     OGG",
+  "T08     OGG",
+  "T09     OGG"
+};
+
+//////////////////////////////////////////////////////////////////////////////
 /***************************************************************************** 
  * Constants: Locks
  *    PERMIT_INTERLOCK - true = read state of interlocks, false = ignore state
@@ -183,7 +209,7 @@ const unsigned long FLOW_ANI_DELAY = 200;
 const int UPDATE_TEMP_DELAY = 100;
 
 const bool PERMIT_WATER_TEMP = true;
-const float WATER_TEMP_LOWER_LIMIT = 303.15; // (293.15K / 20C)
+const float WATER_TEMP_LOWER_LIMIT = 298.15; // (293.15K / 20C)
 const float WATER_TEMP_UPPER_LIMIT = 318.15; // (303.15K / 30C)
 const float WATER_TEMP_LIMIT_DIFF = WATER_TEMP_UPPER_LIMIT - WATER_TEMP_LOWER_LIMIT;
 
@@ -222,13 +248,14 @@ const byte PELTIER_ON = 20;
  *    ALARM_ON             - Constant to turn alarm on
  *    ALARM_OFF            - Constant to turn alarm off
  *    DISPLAY_UPDATE_DELAY - update Nextion display every ms
+ *    PERMIT_SOUND         - Is Adafruit Sound board available?
 *****************************************************************************/
 const bool DOOR_OPEN = HIGH;
 const bool LOCKED = LOW;
 const bool ALARM_ON = LOW;
 const bool ALARM_OFF = HIGH;
 const unsigned long DISPLAY_UPDATE_DELAY = 200;
-
+bool PERMIT_SOUND = true;
 
 /*  Temp limits from different sources
 
