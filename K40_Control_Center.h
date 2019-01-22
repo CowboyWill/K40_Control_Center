@@ -4,23 +4,23 @@
  * 
  *   Defines: Pinouts of Arduino
  * 
- *   These are pinouts for both Arduino
+ *   These are pinouts for Arduino
  * 
  *  WATER_FLOW_PIN - Water flow monitor(?????? to INT0, black to ground)
  *  KEY_PIN        - Key switch (NC contact 1 to gnd, contact 2 to PIN)
  *  BUZZER_PIN     - Warning buzzer (Buzzer+ to PIN, buzzer- to ground)
  *  INTERLOCK_PIN  - Relay to disable laser (+5V to relay VCC, PIN to Relay IN,
  *                   laser enable1 to relay common, laser enable2 to relay NO)
- *  PELTIER_PIN    - Used to turn Peltier cooler on/Off
- *  DOOR_PIN       - Door Switch (Hook up switch between ground and PIN)
+ *  PELTIER_PIN    - Used to turn Peltier cooler On/Off (future use)
+ *  DOOR_PIN       - Door Switch (One switch wire to ground, other wire to PIN)
  *                   Connect additional microswitches in series to protect 
  *                   other doors like the laser tube door and controls door
- *  POINTER_PIN    - Laser pointer connected to this pin
- *  LIGHTS_PIN     - Cabinet lights connected to this pin
+ *  POINTER_PIN    - Laser pointer connected to a transistor pin
+ *  LIGHTS_PIN     - Cabinet lights connected to a transistor pin
  *  POWER_PIN      - Power potentiometer level
  *  LEVEL_PIN      - Water level detector connected to this pin
- *  ASSIST_PIN     - Air Assist pump connected to this pin
- *  EXHAUST_PIN    - Exhaust fan connected to this pin
+ *  ASSIST_PIN     - Air Assist pump relay connected to this pin
+ *  EXHAUST_PIN    - Exhaust fan relay connected to this pin
  *  CURRENT_SDA_PIN- Current Sensor (I2C)
  *  CURRENT_SCL_PIN- Current Sensor (I2C)
  *  CASE_TEMP_PIN  - Case temperature sensor = 10k Thermistor
@@ -101,7 +101,7 @@
           \_______________________/         
          http://busyducks.com/ascii-art-arduinos   */
 
-  #define WATER_FLOW_PIN    2  //INT
+  #define WATER_FLOW_PIN    2  //INT0
   #define KEY_PIN           3
   #define DOOR_PIN          4
   #define INTERLOCK_PIN     5
@@ -142,7 +142,7 @@ const char MESSAGES[9][28] = {
 /***************************************************************************** 
  * Constants: Locks
  *    PERMIT_INTERLOCK - true = read state of interlocks, false = ignore state
- *    PERMIT_INTERLOCK - true = read state of key switch, false = ignore state
+ *    PERMIT_KEY - true = read state of key switch, false = ignore state
 *****************************************************************************/
 const bool PERMIT_INTERLOCK = true;  
 const bool PERMIT_KEY = true;  
@@ -152,8 +152,8 @@ const bool PERMIT_KEY = true;
  *     PERMIT_FLOW    - set to false to ignore the flow sensor
  *     FLOW_RATE_UPPER_LIMIT - (gal per minute)upper limit of flow rate
  *     FLOW_RATE_LOWER_LIMIT - (gal per minute)lower limit of flow rate
- *     UPDATE_FLOW_DELAY  - set the measurement update period in ms
- *     FLOW_INTERRUPT     - interrupt pin for flow meter
+ *     UPDATE_FLOW_DELAY  - set how often to update flow in ms
+ *     FLOW_INTERRUPT     - Arduino  interrupt pin for flow meter
  *     ANI_START_PIC  - Which image is the first for flow animation (Nextion pic #)
  *     ANI_PICS       - How many images are in the flow animation
  *     FLOW_ANI_DELAY - Animation delay in ms
@@ -164,14 +164,14 @@ const float FLOW_RATE_LOWER_LIMIT = 2.0;
 const unsigned long UPDATE_FLOW_DELAY = 500; // 1000ms = 1sec
 const byte FLOW_INTERRUPT = digitalPinToInterrupt(WATER_FLOW_PIN);
 
-const byte ANI_PICS = 4;
 const byte ANI_START_PIC = 21;
+const byte ANI_PICS = 4;
 const unsigned long FLOW_ANI_DELAY = 200;
 
 /***************************************************************************** 
  * Constants: Temperature Variables
- *     UPDATE_TEMP_DELAY      - update temp on display every ms
  *     PERMIT_WATER_TEMP      - set to false to ignore water temp sensor
+ *     UPDATE_TEMP_DELAY      - update temp on display every ms
  *     WATER_TEMP_UPPER_LIMIT - water temp in degrees upper limit (in K)
  *     WATER_TEMP_LOWER_LIMIT - water temp in degrees lower limit (in K)
  *     PERMIT_CASE_TEMP       - set to false to ignore case temp sensor
@@ -183,13 +183,13 @@ const unsigned long FLOW_ANI_DELAY = 200;
 const int UPDATE_TEMP_DELAY = 100;
 
 const bool PERMIT_WATER_TEMP = true;
-const float WATER_TEMP_LOWER_LIMIT = 303.15; // (293.15K / 20C)
-const float WATER_TEMP_UPPER_LIMIT = 318.15; // (303.15K / 30C)
+const float WATER_TEMP_LOWER_LIMIT = 303.15; // (293.15K / 20C / 68F)
+const float WATER_TEMP_UPPER_LIMIT = 318.15; // (303.15K / 30C / 86F)
 const float WATER_TEMP_LIMIT_DIFF = WATER_TEMP_UPPER_LIMIT - WATER_TEMP_LOWER_LIMIT;
 
 const bool PERMIT_CASE_TEMP = true;
-const float CASE_TEMP_LOWER_LIMIT = 10.0;    // (5C / 41F)
-const float CASE_TEMP_UPPER_LIMIT = 50.0;    // (40C / 104F)
+const float CASE_TEMP_LOWER_LIMIT = 10.0;    // (278.15K / 5C / 41F)
+const float CASE_TEMP_UPPER_LIMIT = 50.0;    // (313.15K / 40C / 104F)
 
 /***************************************************************************** 
  * Constants: Thermistor Variables
@@ -203,22 +203,22 @@ const int NUM_SAMPLES = 5;
 
 /***************************************************************************** 
  * Constants: Peliter
- *    PERMIT_PELTIER           - set to true for peltier.  Only works if PERMIT_WATER_TEMP is true
+ *    PERMIT_PELTIER           - true for peltier, if PERMIT_WATER_TEMP is true
  *    WATER_TEMP_UPPER_PELTIER - Upper temp to turn on Peltier
  *    WATER_TEMP_LOWER_PELTIER - Lower temp to turn off Peltier
  *    PELTIER_OFF              - picture number of peltier turned off
  *    PELTIER_ON               - picture number of peltier turned on
 *****************************************************************************/
 const bool PERMIT_PELTIER = true;
-const float WATER_TEMP_UPPER_PELTIER = 310.15; // (300.15K / 30C)
-const float WATER_TEMP_LOWER_PELTIER = 308.15; // (296.15K / 30C)
+const float WATER_TEMP_UPPER_PELTIER = 310.15; // (300.15K / 27C / 80.6F)
+const float WATER_TEMP_LOWER_PELTIER = 308.15; // (296.15K / 23C / 73.4F)
 const byte PELTIER_OFF = 19;
 const byte PELTIER_ON = 20;
 
 /*****************************************************************************
  * Constants: MISC settings Variables
- *    DOOR_OPEN                 - Door setting if opened
- *    LOCKED               - Key locked (disable laser)
+ *    DOOR_OPEN            - Door switch high or low if opened
+ *    LOCKED               - Key locked high or low (disable laser)
  *    ALARM_ON             - Constant to turn alarm on
  *    ALARM_OFF            - Constant to turn alarm off
  *    DISPLAY_UPDATE_DELAY - update Nextion display every ms

@@ -25,7 +25,7 @@
 
   Docs:
     Documentation created by NaturalDocs.org.  Documentation style follows
-    Arduino standard, including:
+    Arduino standard, https://www.arduino.cc/en/Reference/StyleGuide:
 
     - Variable names start with a lower-case letter, use uppercase letters as separators and do not use underbars ('_').
     - Function names start with a lower-case letter, use uppercase letters as separators and do not use underbars ('_').
@@ -35,10 +35,12 @@
     - Using const instead of define.
  *****************************************************************************/
 
-// Files: Include files
-//   K40_Control_Center.h - main configuration file
-//   Nextion.h            - Nextion display
-//   FlowMeter            - water flow library
+/****************************************************************************
+ * Files: Include files
+ *   K40_Control_Center.h - main configuration file
+ *   Nextion.h            - Nextion display
+ *   FlowMeter            - water flow library
+ ****************************************************************************/
 #include "K40_Control_Center.h"
 #include "Nextion.h"
 #include <FlowMeter.h>      // https://github.com/sekdiy/FlowMeter

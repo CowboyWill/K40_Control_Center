@@ -12,6 +12,7 @@ I needed some additional functionality as described below:
 __Author:  Will Travis__
 
 changed the dbSerialPrint to accept multiple variables,  e.g. dbSerialPrint(variable, HEX)
+```
 FROM:
     #define dbSerialPrint(a)    dbSerial.print(a)
     #define dbSerialPrintln(a)  dbSerial.println(a)
@@ -20,7 +21,7 @@ TO:
     #define dbSerialPrint(...)    dbSerial.print(__VA_ARGS__)
     #define dbSerialPrintln(...)  dbSerial.println(__VA_ARGS__)
     #define dbSerialBegin(...)    dbSerial.begin(__VA_ARGS__)
-
+```
 ## NexHardware.cpp
 __Author:  Will Travis__
 
