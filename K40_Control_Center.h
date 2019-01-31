@@ -29,21 +29,46 @@
  *                   5v to 10k resistor to sensor and PIN, sensor to gnd
 *****************************************************************************/
 #if defined(ARDUINO_AVR_UNO)
-  //Nano specific code
+  /*Nano specific code
+                   +-----+
+      +------------| USB |------------+
+      |            +-----+            |
+  B5  | [ ]D13/SCK        MISO/D12[ ] |  B4
+      | [ ]3.3V           MOSI/D11[ ]~|  B3
+      | [ ]V.ref     ___    SS/D10[ ]~|  B2
+  C0  | [ ]A0       / N \       D9[ ]~|  B1
+  C1  | [ ]A1      /  A  \      D8[ ] |  B0
+  C2  | [ ]A2      \  N  /      D7[ ] |  D7
+  C3  | [ ]A3       \_0_/       D6[ ]~|  D6
+  C4  | [ ]A4/SDA               D5[ ]~|  D5
+  C5  | [ ]A5/SCL               D4[ ] |  D4
+      | [ ]A6 only         INT1/D3[ ]~|  D3
+      | [ ]A7 only         INT0/D2[ ] |  D2
+      | [ ]5V                  GND[ ] |    
+  C6  | [ ]RST                 RST[ ] |  C6
+      | [ ]GND   5V MOSI GND   RX1[ ] |  D0
+      | [ ]Vin   [ ] [ ] [ ]   TX1[ ] |  D1
+      |          [ ] [ ] [ ]          |
+      |          MISO SCK RST         |
+      +-------------------------------+
+      http://busyducks.com/ascii-art-arduinos */
   #define WATER_FLOW_PIN  32  //D2
   #define KEY_PIN         1   //D3
-  #define BUZZER_PIN      2   //D4
+  #define DOOR_PIN        2   //D4
   #define INTERLOCK_PIN   9   //D5 
   #define PELTIER_PIN     10  //D6 
-  #define DOOR_PIN        11  //D7
-  #define POINTER_PIN     12  //D8
-  #define LIGHTS_PIN      13  //D9
+  #define BUZZER_PIN      11  //D7
+  #define POINTER_PIN     12  //D8/B0
+  #define LIGHTS_PIN      13  //D9/B1
+  #define SOUNDBOARD_RST  14  //D10/B2
+  #define SOUNDBOARD_RX   15  //D11/B3
+  #define LASERBOARD      16  //D12/B4
   #define POWER_PIN       23  //D14/A0
   #define LEVEL_PIN       24  //D15/A1
   #define ASSIST_PIN      25  //D16/A2
   #define EXHAUST_PIN     26  //D17/A3
-  #define CURRENT_SDA_PIN 27  //A4
-  #define CURRENT_SCL_PIN 28  //A5
+  #define CURRENT_SDA_PIN 27  //A4/SDA
+  #define CURRENT_SCL_PIN 28  //A5/SCL
   #define CASE_TEMP_PIN   19  //A6
   #define WATER_TEMP_PIN  22  //A7
 #else
